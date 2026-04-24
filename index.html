@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Last Button Game</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+            overflow: hidden; 
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .main-layout {
+            display: flex;
+            flex: 1;
+            width: 100%;
+            height: 100%;
+            padding: 1rem;
+            gap: 1rem;
+            align-items: stretch;
+        }
+
+        #button-area {
+            position: relative;
+            flex: 1;
+            background: rgba(30, 41, 59, 0.3);
+            border-radius: 2rem;
+            border: 2px dashed rgba(71, 85, 105, 0.5);
+            overflow: hidden;
+        }
+
+        .game-button {
+            position: absolute;
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            cursor: default;
+            transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.4s ease;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3), inset 0 -4px 4px rgba(0,0,0,0.2);
+        }
+
+        .game-button::before {
+            content: '::';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            letter-spacing: 2px;
+            font-weight: bold;
+            opacity: 0.3;
+            color: black;
+        }
+
+        .game-button.removed {
+            transform: translate(var(--tx), 120vh) rotate(var(--rot)) scale(0) !important;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .game-button.highlight {
+            filter: brightness(1.5) saturate(1.5);
+            transform: scale(1.2) rotate(var(--base-rot)) !important;
+            z-index: 50;
+            outline: 3px solid white;
+            outline-offset: 4px;
+        }
+
+        .player-section {
+            width: 220px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            opacity: 0.4;
+            filter: grayscale(0.8);
+            pointer-events: none;
+        }
+
+        .player-section.active {
+            opacity: 1;
+            filter: grayscale(0);
+            pointer-events: auto;
+        }
+
+        .control-panel {
+            background: rgba(30, 41, 59, 0.5);
+            border: 1px solid rgba(71, 85, 105, 0.3);
+            border-radius: 2rem;
+            padding: 2rem 1.5rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.5rem;
+            text-align: center;
+        }
+
+        .modal-overlay {
+            background-color: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(8px);
+        }
+
+        .action-btn {
+            width: 100%;
+            padding: 1rem;
+            border-radius: 1rem;
+            font-weight: 800;
+            font-size: 1.1rem;
+            transition: all 0.2s;
+        }
+
+        .player-badge {
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            font-size: 1.5rem;
+            font-weight: 900;
+            margin-bottom: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="text-center pt-4">
+        <h1 class="text-2xl font-800 bg-gradient-to-r from-amber-400 to-orange-500 bg-clip-text text-transparent">
+            THE SCATTERED BUTTONS
+        </h1>
+        <p class="text-slate-500 text-xs">A Strategic Game of Nim</p>
+    </div>
+
+    <div class="main-layout">
+        <!-- Player 1 - Left -->
+        <div id="player1-side" class="player-section active">
+            <div class="control-panel">
+                <div class="player-badge bg-amber-500 text-slate-900 shadow-lg shadow-amber-500/20">1</div>
+                <div>
+                    <div class="text-xs uppercase tracking-widest text-amber-500 font-bold">Player One</div>
+                    <div class="text-xl font-bold status-text">Your Turn</div>
+                </div>
+                <div class="flex flex-col gap-3 w-full">
+                    <button onclick="handleMove(1)" id="p1-btn-1" class="action-btn bg-slate-700 hover:bg-slate-600 text-white">Take 1</button>
+                    <button onclick="handleMove(2)" id="p1-btn-2" class="action-btn bg-slate-700 hover:bg-slate-600 text-white">Take 2</button>
+                    <button onclick="handleMove(3)" id="p1-btn-3" class="action-btn bg-slate-700 hover:bg-slate-600 text-white">Take 3</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- The Board - Center -->
+        <div id="button-area"></div>
+
+        <!-- Player 2 - Right -->
+        <div id="player2-side" class="player-section">
+            <div class="control-panel">
+                <div class="player-badge bg-blue-500 text-slate-900 shadow-lg shadow-blue-500/20">2</div>
+                <div>
+                    <div class="text-xs uppercase tracking-widest text-blue-500 font-bold">Player Two</div>
+                    <div class="text-xl font-bold status-text">Waiting...</div>
+                </div>
+                <div class="flex flex-col gap-3 w-full">
+                    <button onclick="handleMove(1)" id="p2-btn-1" class="action-btn bg-slate-700 hover:bg-slate-600 text-white">Take 1</button>
+                    <button onclick="handleMove(2)" id="p2-btn-2" class="action-btn bg-slate-700 hover:bg-slate-600 text-white">Take 2</button>
+                    <button onclick="handleMove(3)" id="p2-btn-3" class="action-btn bg-slate-700 hover:bg-slate-600 text-white">Take 3</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Over Modal -->
+    <div id="modal" class="hidden fixed inset-0 modal-overlay flex items-center justify-center z-50 p-4">
+        <div class="bg-slate-900 border border-slate-700 p-8 rounded-3xl max-w-sm w-full text-center shadow-2xl">
+            <div class="text-6xl mb-4">🏆</div>
+            <h2 id="modal-title" class="text-3xl font-bold mb-2 text-white">Player 2 Wins!</h2>
+            <p id="modal-desc" class="text-slate-400 mb-8">Strategic move!</p>
+            <button onclick="resetGame()" class="w-full py-4 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl transition-all">
+                Shuffle & Restart
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const COLORS = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316'];
+        let totalButtons = 0;
+        let currentPlayer = 1;
+        let isProcessing = false;
+
+        const container = document.getElementById('button-area');
+        const modal = document.getElementById('modal');
+
+        function initButtons() {
+            totalButtons = Math.floor(Math.random() * 10) + 21;
+            container.innerHTML = '';
+            const rect = container.getBoundingClientRect();
+            
+            for (let i = 0; i < totalButtons; i++) {
+                const btn = document.createElement('div');
+                btn.className = 'game-button';
+                const color = COLORS[Math.floor(Math.random() * COLORS.length)];
+                const randomX = Math.random() * (rect.width - 60) + 5;
+                const randomY = Math.random() * (rect.height - 60) + 5;
+                const randomRot = Math.floor(Math.random() * 360);
+                
+                btn.style.backgroundColor = color;
+                btn.style.left = `${randomX}px`;
+                btn.style.top = `${randomY}px`;
+                btn.style.setProperty('--base-rot', `${randomRot}deg`);
+                btn.style.transform = `rotate(${randomRot}deg)`;
+                btn.style.setProperty('--tx', `${(Math.random() - 0.5) * 200}px`);
+                btn.style.setProperty('--rot', `${(Math.random() - 0.5) * 1000}deg`);
+                
+                btn.id = `btn-piece-${i}`;
+                container.appendChild(btn);
+            }
+            updateUI();
+        }
+
+        function updateUI() {
+            document.getElementById('player1-side').classList.toggle('active', currentPlayer === 1 && !isProcessing);
+            document.getElementById('player2-side').classList.toggle('active', currentPlayer === 2 && !isProcessing);
+
+            document.querySelector('#player1-side .status-text').innerText = currentPlayer === 1 ? "Your Turn" : "Waiting...";
+            document.querySelector('#player2-side .status-text').innerText = currentPlayer === 2 ? "Your Turn" : "Waiting...";
+
+            for (let p = 1; p <= 2; p++) {
+                for (let move = 1; move <= 3; move++) {
+                    const btn = document.getElementById(`p${p}-btn-${move}`);
+                    const shouldDisable = totalButtons < move || currentPlayer !== p || isProcessing;
+                    btn.disabled = shouldDisable;
+                    
+                    if (shouldDisable) {
+                        btn.style.opacity = "0.2";
+                        btn.style.filter = "grayscale(1)";
+                        btn.style.cursor = "not-allowed";
+                    } else {
+                        btn.style.opacity = "1";
+                        btn.style.filter = "none";
+                        btn.style.cursor = "pointer";
+                    }
+                }
+            }
+        }
+
+        async function handleMove(amount) {
+            if (isProcessing || amount > totalButtons) return;
+            isProcessing = true;
+            updateUI();
+
+            const available = Array.from(document.querySelectorAll('.game-button:not(.removed)'));
+            const shuffled = available.sort(() => Math.random() - 0.5);
+            const toRemove = shuffled.slice(0, amount);
+
+            for (const btn of toRemove) {
+                btn.classList.add('removed');
+                await new Promise(r => setTimeout(r, 150));
+            }
+
+            totalButtons -= amount;
+
+            if (totalButtons === 1) {
+                endGame(currentPlayer, true);
+            } else if (totalButtons === 0) {
+                endGame(currentPlayer === 1 ? 2 : 1, false);
+            } else {
+                currentPlayer = currentPlayer === 1 ? 2 : 1;
+                isProcessing = false;
+                updateUI();
+            }
+        }
+
+        function endGame(winner, earlyWin) {
+            document.getElementById('modal-title').innerText = `Player ${winner} Wins!`;
+            document.getElementById('modal-desc').innerText = earlyWin 
+                ? `Strategic move! Opponent must take the last button.` 
+                : `Opponent picked up the very last button!`;
+            modal.classList.remove('hidden');
+        }
+
+        function resetGame() {
+            currentPlayer = 1;
+            isProcessing = false;
+            modal.classList.add('hidden');
+            initButtons();
+        }
+
+        window.onload = () => setTimeout(initButtons, 100);
+
+        document.querySelectorAll('.action-btn').forEach(btn => {
+            btn.addEventListener('mouseenter', () => {
+                if(btn.disabled) return;
+                const amount = parseInt(btn.id.split('-').pop());
+                const available = Array.from(document.querySelectorAll('.game-button:not(.removed)'));
+                for (let i = 0; i < amount && i < available.length; i++) {
+                    available[i].classList.add('highlight');
+                }
+            });
+            btn.addEventListener('mouseleave', () => {
+                document.querySelectorAll('.game-button').forEach(b => b.classList.remove('highlight'));
+            });
+        });
+
+        window.addEventListener('resize', () => {
+             const rect = container.getBoundingClientRect();
+             document.querySelectorAll('.game-button:not(.removed)').forEach(btn => {
+                 const x = parseFloat(btn.style.left);
+                 const y = parseFloat(btn.style.top);
+                 if (rect.width > 0) {
+                    if (x > rect.width - 60) btn.style.left = `${rect.width - 60}px`;
+                    if (y > rect.height - 60) btn.style.top = `${rect.height - 60}px`;
+                 }
+             });
+        });
+    </script>
+</body>
+</html>
