@@ -127,18 +127,90 @@
             font-weight: 900;
             margin-bottom: 0.5rem;
         }
+
+        .timer-display {
+            font-family: 'Courier New', monospace;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #f43f5e;
+            background: rgba(0,0,0,0.3);
+            padding: 2px 10px;
+            border-radius: 8px;
+            margin-top: 5px;
+        }
+
+        /* Toggle styling */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 40px;
+            height: 20px;
+        }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #334155;
+            transition: .4s;
+            border-radius: 20px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 14px; width: 14px;
+            left: 3px; bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .slider { background-color: #f59e0b; }
+        input:checked + .slider:before { transform: translateX(20px); }
+
+        #start-overlay {
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(12px);
+        }
     </style>
 </head>
 <body>
 
-    <div class="text-center pt-4">
-        <h1 class="text-2xl font-800 bg-gradient-to-r from-amber-400 to-orange-500 bg-clip-text text-transparent">
-            THE SCATTERED BUTTONS
-        </h1>
-        <p class="text-slate-500 text-[10px] uppercase tracking-widest font-semibold">Developed by JV Dela Cruz</p>
+    <div class="flex items-center justify-between px-6 pt-4">
+        <div class="flex-1"></div>
+        <div class="text-center flex-1">
+            <h1 class="text-2xl font-800 bg-gradient-to-r from-amber-400 to-orange-500 bg-clip-text text-transparent">
+                THE SCATTERED BUTTONS
+            </h1>
+            <p class="text-slate-500 text-[10px] uppercase tracking-widest font-semibold">Developed by JV Dela Cruz</p>
+        </div>
+        <!-- Settings Bar -->
+        <div class="flex-1 flex justify-end items-center gap-4 bg-slate-800/50 p-3 rounded-2xl border border-slate-700/50">
+            <div class="flex items-center gap-2">
+                <span class="text-[10px] font-bold uppercase text-slate-400">Timer</span>
+                <label class="switch">
+                    <input type="checkbox" id="timer-toggle">
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div id="timer-input-wrap" class="hidden flex items-center gap-1">
+                <input type="number" id="timer-seconds" value="10" min="3" max="60" class="w-12 bg-slate-900 border border-slate-600 rounded px-1 text-xs text-amber-400 font-bold text-center">
+                <span class="text-[10px] text-slate-500 font-bold">SEC</span>
+            </div>
+        </div>
     </div>
 
-    <div class="main-layout">
+    <div class="main-layout relative">
+        <!-- Start Overlay -->
+        <div id="start-overlay" class="absolute inset-0 z-40 flex flex-col items-center justify-center rounded-3xl m-4 border-2 border-slate-700/50">
+            <div class="bg-slate-900/80 p-10 rounded-3xl border border-slate-700 text-center shadow-2xl">
+                <h2 class="text-4xl font-black mb-4">Ready to Play?</h2>
+                <p class="text-slate-400 mb-8 max-w-xs">Adjust your timer settings above if needed, then click start to begin the game.</p>
+                <button onclick="startGame()" class="px-12 py-4 bg-orange-600 hover:bg-orange-500 text-white font-black text-xl rounded-2xl transition-all shadow-xl shadow-orange-900/20 active:scale-95">
+                    START GAME
+                </button>
+            </div>
+        </div>
+
         <!-- Player 1 - Left -->
         <div id="player1-side" class="player-section active">
             <div class="control-panel">
@@ -146,6 +218,7 @@
                 <div>
                     <div class="text-xs uppercase tracking-widest text-amber-500 font-bold">Player One</div>
                     <div class="text-xl font-bold status-text">Your Turn</div>
+                    <div id="p1-timer" class="timer-display hidden">00:10</div>
                 </div>
                 <div class="flex flex-col gap-3 w-full">
                     <button onclick="handleMove(1)" id="p1-btn-1" class="action-btn bg-slate-700 hover:bg-slate-600 text-white">Take 1</button>
@@ -165,6 +238,7 @@
                 <div>
                     <div class="text-xs uppercase tracking-widest text-blue-500 font-bold">Player Two</div>
                     <div class="text-xl font-bold status-text">Waiting...</div>
+                    <div id="p2-timer" class="timer-display hidden">00:10</div>
                 </div>
                 <div class="flex flex-col gap-3 w-full">
                     <button onclick="handleMove(1)" id="p2-btn-1" class="action-btn bg-slate-700 hover:bg-slate-600 text-white">Take 1</button>
@@ -182,7 +256,7 @@
     <!-- Game Over Modal -->
     <div id="modal" class="hidden fixed inset-0 modal-overlay flex items-center justify-center z-50 p-4">
         <div class="bg-slate-900 border border-slate-700 p-8 rounded-3xl max-w-sm w-full text-center shadow-2xl">
-            <div class="text-6xl mb-4">🏆</div>
+            <div id="modal-icon" class="text-6xl mb-4">🏆</div>
             <h2 id="modal-title" class="text-3xl font-bold mb-2 text-white">Player 2 Wins!</h2>
             <p id="modal-desc" class="text-slate-400 mb-8">Strategic move!</p>
             <button onclick="resetGame()" class="w-full py-4 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl transition-all">
@@ -195,10 +269,78 @@
         const COLORS = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316'];
         let totalButtons = 0;
         let currentPlayer = 1;
-        let isProcessing = false;
+        let isProcessing = true; // Block interaction initially
+        let gameStarted = false;
+        
+        // Timer Logic
+        let timerEnabled = false;
+        let turnDuration = 10;
+        let timeLeft = 10;
+        let timerInterval = null;
 
         const container = document.getElementById('button-area');
         const modal = document.getElementById('modal');
+        const timerToggle = document.getElementById('timer-toggle');
+        const timerInputWrap = document.getElementById('timer-input-wrap');
+        const timerSeconds = document.getElementById('timer-seconds');
+        const startOverlay = document.getElementById('start-overlay');
+
+        // Settings Listeners
+        timerToggle.addEventListener('change', (e) => {
+            timerEnabled = e.target.checked;
+            timerInputWrap.classList.toggle('hidden', !timerEnabled);
+            document.getElementById('p1-timer').classList.toggle('hidden', !timerEnabled);
+            document.getElementById('p2-timer').classList.toggle('hidden', !timerEnabled);
+            
+            if (gameStarted) {
+                if(timerEnabled) resetTurnTimer();
+                else stopTimer();
+            }
+        });
+
+        timerSeconds.addEventListener('change', (e) => {
+            turnDuration = parseInt(e.target.value) || 10;
+            if (gameStarted) resetTurnTimer();
+        });
+
+        function startGame() {
+            gameStarted = true;
+            isProcessing = false;
+            startOverlay.classList.add('hidden');
+            updateUI();
+            resetTurnTimer();
+        }
+
+        function resetTurnTimer() {
+            stopTimer();
+            if (!timerEnabled || !gameStarted) return;
+            
+            timeLeft = turnDuration;
+            updateTimerDisplay();
+            
+            timerInterval = setInterval(() => {
+                if (isProcessing) return;
+                timeLeft--;
+                updateTimerDisplay();
+                if (timeLeft <= 0) {
+                    stopTimer();
+                    endGame(currentPlayer === 1 ? 2 : 1, false, true);
+                }
+            }, 1000);
+        }
+
+        function stopTimer() {
+            if (timerInterval) clearInterval(timerInterval);
+        }
+
+        function updateTimerDisplay() {
+            const display = document.getElementById(`p${currentPlayer}-timer`);
+            const inactive = document.getElementById(`p${currentPlayer === 1 ? 2 : 1}-timer`);
+            
+            const fmt = (s) => `00:${s.toString().padStart(2, '0')}`;
+            display.innerText = fmt(timeLeft);
+            inactive.innerText = fmt(turnDuration);
+        }
 
         function initButtons() {
             totalButtons = Math.floor(Math.random() * 10) + 21;
@@ -228,8 +370,8 @@
         }
 
         function updateUI() {
-            document.getElementById('player1-side').classList.toggle('active', currentPlayer === 1 && !isProcessing);
-            document.getElementById('player2-side').classList.toggle('active', currentPlayer === 2 && !isProcessing);
+            document.getElementById('player1-side').classList.toggle('active', currentPlayer === 1 && !isProcessing && gameStarted);
+            document.getElementById('player2-side').classList.toggle('active', currentPlayer === 2 && !isProcessing && gameStarted);
 
             document.querySelector('#player1-side .status-text').innerText = currentPlayer === 1 ? "Your Turn" : "Waiting...";
             document.querySelector('#player2-side .status-text').innerText = currentPlayer === 2 ? "Your Turn" : "Waiting...";
@@ -237,7 +379,7 @@
             for (let p = 1; p <= 2; p++) {
                 for (let move = 1; move <= 3; move++) {
                     const btn = document.getElementById(`p${p}-btn-${move}`);
-                    const shouldDisable = totalButtons < move || currentPlayer !== p || isProcessing;
+                    const shouldDisable = totalButtons < move || currentPlayer !== p || isProcessing || !gameStarted;
                     btn.disabled = shouldDisable;
                     
                     if (shouldDisable) {
@@ -254,7 +396,7 @@
         }
 
         async function handleMove(amount) {
-            if (isProcessing || amount > totalButtons) return;
+            if (isProcessing || amount > totalButtons || !gameStarted) return;
             isProcessing = true;
             updateUI();
 
@@ -277,21 +419,35 @@
                 currentPlayer = currentPlayer === 1 ? 2 : 1;
                 isProcessing = false;
                 updateUI();
+                resetTurnTimer();
             }
         }
 
-        function endGame(winner, earlyWin) {
+        function endGame(winner, earlyWin, isTimeout = false) {
+            stopTimer();
+            gameStarted = false;
+            const modalIcon = document.getElementById('modal-icon');
             document.getElementById('modal-title').innerText = `Player ${winner} Wins!`;
-            document.getElementById('modal-desc').innerText = earlyWin 
-                ? `Strategic move! Opponent must take the last button.` 
-                : `Opponent picked up the very last button!`;
+            
+            if (isTimeout) {
+                modalIcon.innerText = "⏰";
+                const loser = winner === 1 ? 2 : 1;
+                document.getElementById('modal-desc').innerText = `Player ${loser} ran out of time!`;
+            } else {
+                modalIcon.innerText = "🏆";
+                document.getElementById('modal-desc').innerText = earlyWin 
+                    ? `Strategic move! Opponent must take the last button.` 
+                    : `Opponent picked up the very last button!`;
+            }
             modal.classList.remove('hidden');
         }
 
         function resetGame() {
             currentPlayer = 1;
-            isProcessing = false;
+            isProcessing = true;
+            gameStarted = false;
             modal.classList.add('hidden');
+            startOverlay.classList.remove('hidden');
             initButtons();
         }
 
